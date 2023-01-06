@@ -1218,7 +1218,7 @@ void MainWindow::on_actionAbout_program_triggered()// о программе
     modalDialog->setModal(true);
 
     QBoxLayout* boxLayout2 = new QBoxLayout(QBoxLayout::Down);
-    QLabel *authorLabel = new QLabel("Author: Artem Motyakin");
+    QLabel *authorLabel = new QLabel("Author: Artem");
     QLabel *dateLabel = new QLabel("Creation date: 18.11.2022");
     QLabel *qt1Label = new QLabel("Qt version: 6.4.0");
     QLabel *qt2Label = new QLabel("Your Qt version: " + (QString)QT_VERSION_STR);
