@@ -18,7 +18,6 @@ SOURCES += \
 
 HEADERS += \
     mainwindow.h \
-    openssl-generator.h \
     server.h
 
 FORMS += \

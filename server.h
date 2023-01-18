@@ -36,14 +36,6 @@
 #include <QUuid>
 #include <QDataStream>
 
-//#define CRYPTO
-#ifdef CRYPTO
-#include "QSslKey"
-#include "QSslSocket"
-#include "QSslCertificate"
-#include "openssl_generator_.h"
-#endif // CRYPTO
-
 struct Clients
 {
     QString name;
@@ -118,42 +110,9 @@ public:
         _box->addWidget(button_file);
         _password = "";
         _file_name = new QLabel();
-
-        #ifdef CRYPTO
-        EVP_PKEY * privKey = generate_key();
-        if (privKey == NULL)
-        {
-            exit(-1);
-        }
-        X509 * certif = generate_x509(privKey);
-        if(certif == NULL)
-        {
-            exit(-1);
-        }
-        BIO* bio = BIO_new(BIO_s_mem());
-        if (!PEM_write_bio_X509(bio, certif))
-        {
-            exit(-1);
-        }
-        BUF_MEM* biostruct;
-        BIO_get_mem_ptr(bio, &biostruct);
-        std::unique_ptr<char[]> buf = std::make_unique<char[]>(biostruct->length);
-        if (static_cast<size_t>(BIO_read(bio, buf.get(), biostruct->length)) != biostruct->length)
-        {
-            exit(-1);
-        }
-        QSslCertificate cert(QByteArray(buf.get(), biostruct->length));
-        QSslKey key(reinterpret_cast<Qt::HANDLE>(privKey));
-        server = new SslServer(this);
-        SslConfig = server->sslConfiguration();
-        SslConfig.setLocalCertificate(cert);
-        SslConfig.setPrivateKey(key);
-        server->setSslConfiguration(SslConfig);
-        #endif // CRYPTO
     }
 
 private:
-    QWebSocket* server_socket;
     std::map<QWebSocket*, Clients*> _clients_map;// (имя, статус, время подсоединения)
     QJsonArray _chat_messages;
     QString _port;

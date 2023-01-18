@@ -226,20 +226,6 @@ void Server::onExit()
 
 void Server::saveToXML()
 {
-    #ifdef CRYPTO
-    OPENSSL_add_all_algorithms_conf();
-    ERR_load_ERR_strings();
-    ENGINE *engine_gost = ENGINE_by_id("gost");
-    const EVP_CIPHER * cipher_gost = EVP_get_cipher_by_name("gost89");
-    unsigned char * iv = (unsigned char * ) "12345678";
-    unsigned char ciph[512];
-    int ciph_len = 0;
-    EVP_CIPHER_CTX * ctx = EVP_CIPHER_CTX_new();
-    QByteArray ba = _password.toLocal8Bit();
-    const char *pass = ba.data();
-    int init = EVP_EncryptInit_ex(ctx, cipher_gost, engine_gost, pass, iv);
-    #endif // CRYPTO
-
     QDomDocument doc;
     QDomElement passw = doc.createElement("password");
     QDomText passwText = doc.createTextNode(_password.toUtf8().toBase64(QByteArray::Base64Encoding));
@@ -304,15 +290,6 @@ void Server::saveToXML()
             file_id.appendChild(file_id_text);
             message.appendChild(file_id);
         }
-
-        #ifdef CRYPTO
-        ba = QByteArray::fromHex(text.toLatin1());
-        const unsigned char *result = reinterpret_cast<const unsigned char *>(ba.constData());
-        int enc = EVP_EncryptUpdate(ctx, ciph, &ciph_len, result, text.length());
-        log.setAttribute("content", enc);
-        QDomText messageText = doc.createTextNode(enc);
-        #endif // CRYPTO
-
         QDomElement name = doc.createElement("name");
         QDomText nameText = doc.createTextNode(i.toObject()["username"].toString());
         date.appendChild(dateText);
@@ -425,7 +402,7 @@ void Server::MenuTriggered_exit()
 
 void Server::slotDisconnected()
 {
-    server_socket = (QWebSocket*) sender();
+    QWebSocket* server_socket = (QWebSocket*) sender();
     QString temptext = QDateTime::currentDateTime().toString() + "\tUser " +
             server_socket->peerAddress().toString() + ":" +
             QString::number(server_socket->peerPort()) + " has DISCONNECTED";
@@ -435,7 +412,7 @@ void Server::slotDisconnected()
     {
         if (i->first->peerAddress() == server_socket->peerAddress() && i->first->peerPort() == server_socket->peerPort())
         {
-            _SendInfoToClients(_clients_map[server_socket]->name, server_socket->peerAddress().toString(), _clients_map[server_socket]->status, _clients_map[server_socket]->time, _clients_map[server_socket]->avatarka, (_clients_map[server_socket])->ava_width, (_clients_map[server_socket])->ava_height, false);
+            _SendInfoToClients(_clients_map[server_socket]->name, server_socket->peerAddress().toString() + ":" + QString::number(server_socket->peerPort()), _clients_map[server_socket]->status, _clients_map[server_socket]->time, _clients_map[server_socket]->avatarka, (_clients_map[server_socket])->ava_width, (_clients_map[server_socket])->ava_height, false);
             delete i->second;
             _clients_map.erase(i);
             break;
@@ -452,7 +429,7 @@ void Server::incomingConnectionAuth(QWebSocketCorsAuthenticator* authenticator)
 
 void Server::incomingConnection()
 {
-    server_socket = nextPendingConnection();
+    QWebSocket* server_socket = nextPendingConnection();
     connect(server_socket, SIGNAL(binaryMessageReceived(const QByteArray&)), this, SLOT(slotReadyRead(const QByteArray&)));
     connect(server_socket, SIGNAL(disconnected()), this, SLOT(slotDisconnected()));
     QString temptext = QDateTime::currentDateTime().toString() + "\tUser " +
@@ -461,13 +438,13 @@ void Server::incomingConnection()
     QString greentext = QString("<span style=\" color:#228B22;\">%1</span>").arg(temptext);
     _textbrowser->append(greentext);
     _clients_map[server_socket] = new Clients("", "", "", "", "", "");
-    _SendInfoToClients((_clients_map[server_socket])->name, server_socket->peerAddress().toString(), (_clients_map[server_socket])->status, (_clients_map[server_socket])->time, (_clients_map[server_socket])->avatarka, (_clients_map[server_socket])->ava_width, (_clients_map[server_socket])->ava_height, true);
+    _SendInfoToClients((_clients_map[server_socket])->name, server_socket->peerAddress().toString() + ":" + QString::number(server_socket->peerPort()), (_clients_map[server_socket])->status, (_clients_map[server_socket])->time, (_clients_map[server_socket])->avatarka, (_clients_map[server_socket])->ava_width, (_clients_map[server_socket])->ava_height, true);
     _mainwindow->setWindowTitle("Hosting Server on " + _ip + ":" + _port + ", clients: " + QString::number(_clients_map.size()));
     for (auto i = _clients_map.begin(); i != _clients_map.end(); i++)
     {
         if (i->first->peerAddress() != server_socket->peerAddress() || i->first->peerPort() != server_socket->peerPort())
         {
-            _SendInfoToOneClient(server_socket, i->second->name, i->first->peerAddress().toString(), i->second->status, i->second->time, i->second->avatarka, i->second->ava_width, i->second->ava_height, true);
+            _SendInfoToOneClient(server_socket, i->second->name, i->first->peerAddress().toString() + ":" + QString::number(i->first->peerPort()), i->second->status, i->second->time, i->second->avatarka, i->second->ava_width, i->second->ava_height, true);
         }
         if(i->first->peerAddress() == server_socket->peerAddress() && i->first->peerPort() == server_socket->peerPort())
         {
@@ -478,6 +455,7 @@ void Server::incomingConnection()
 
 void Server::slotReadyRead(const QByteArray& arr)
 {
+            QWebSocket* server_socket = (QWebSocket*) sender();
             qDebug()<<"json";
             QJsonDocument json = QJsonDocument::fromJson(arr);
             QJsonObject jsonobj = json.object();
@@ -493,7 +471,7 @@ void Server::slotReadyRead(const QByteArray& arr)
                 QString avatarka = jsonobj["new_avatarka"].toString();
                 QString ava_width = jsonobj["avatarka_width"].toString();
                 QString ava_height = jsonobj["avatarka_height"].toString();
-                _SendInfoToClients((_clients_map[server_socket])->name, server_socket->peerAddress().toString(), (_clients_map[server_socket])->status, (_clients_map[server_socket])->time, (_clients_map[server_socket])->avatarka, (_clients_map[server_socket])->ava_width, (_clients_map[server_socket])->ava_height, false);
+                _SendInfoToClients((_clients_map[server_socket])->name, server_socket->peerAddress().toString() + ":" + QString::number(server_socket->peerPort()), (_clients_map[server_socket])->status, (_clients_map[server_socket])->time, (_clients_map[server_socket])->avatarka, (_clients_map[server_socket])->ava_width, (_clients_map[server_socket])->ava_height, false);
                 for (auto i = _clients_map.begin(); i != _clients_map.end(); i++)
                 {
                     if (i->first->peerAddress() == server_socket->peerAddress() && i->first->peerPort() == server_socket->peerPort())
@@ -510,7 +488,8 @@ void Server::slotReadyRead(const QByteArray& arr)
                         break;
                     }
                 }
-                _SendInfoToClients((_clients_map[server_socket])->name, server_socket->peerAddress().toString(), (_clients_map[server_socket])->status, (_clients_map[server_socket])->time, (_clients_map[server_socket])->avatarka, (_clients_map[server_socket])->ava_width, (_clients_map[server_socket])->ava_height, true);
+                qDebug()<<"New: " + server_socket->peerAddress().toString() + ":" + QString::number(server_socket->peerPort());
+                _SendInfoToClients((_clients_map[server_socket])->name, server_socket->peerAddress().toString() + ":" + QString::number(server_socket->peerPort()), (_clients_map[server_socket])->status, (_clients_map[server_socket])->time, (_clients_map[server_socket])->avatarka, (_clients_map[server_socket])->ava_width, (_clients_map[server_socket])->ava_height, true);
             }
             else if (jsonobj.contains("message"))//просто пришло сообщение
             {
@@ -521,7 +500,7 @@ void Server::slotReadyRead(const QByteArray& arr)
                 QString avatarka = jsonobj["avatarka"].toString();
                 QString ava_width = jsonobj["avatarka_width"].toString();
                 QString ava_height = jsonobj["avatarka_height"].toString();
-                _SendMessageToClients(message, name, server_socket->peerAddress().toString(), avatarka, ava_width, ava_height);
+                _SendMessageToClients(message, name, server_socket->peerAddress().toString() + ":" + QString::number(server_socket->peerPort()), avatarka, ava_width, ava_height);
             }
             else if (jsonobj.contains("image"))//если пришла картинка
             {
@@ -534,7 +513,7 @@ void Server::slotReadyRead(const QByteArray& arr)
                 QString avatarka = jsonobj["avatarka"].toString();
                 QString ava_width = jsonobj["avatarka_width"].toString();
                 QString ava_height = jsonobj["avatarka_height"].toString();
-                _SendImageToClients(image, im_width, im_height, name, server_socket->peerAddress().toString(), avatarka, ava_width, ava_height);
+                _SendImageToClients(image, im_width, im_height, name, server_socket->peerAddress().toString() + ":" + QString::number(server_socket->peerPort()), avatarka, ava_width, ava_height);
             }
             else if (jsonobj.contains("file"))//если пришёл файл
             {
@@ -546,7 +525,7 @@ void Server::slotReadyRead(const QByteArray& arr)
                 QString avatarka = jsonobj["avatarka"].toString();
                 QString ava_width = jsonobj["avatarka_width"].toString();
                 QString ava_height = jsonobj["avatarka_height"].toString();
-                _SendFileToClients(file, file_name, name, server_socket->peerAddress().toString(), avatarka, ava_width, ava_height);
+                _SendFileToClients(file, file_name, name, server_socket->peerAddress().toString() + ":" + QString::number(server_socket->peerPort()), avatarka, ava_width, ava_height);
             }
 }
 
