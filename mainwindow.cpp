@@ -39,11 +39,6 @@ MainWindow::MainWindow(QWidget *parent)
     _chosen_image = new QLabel;
     photo = new QLabel;
 
-    #ifdef CRYPTO
-    this->_sok->setPeerVerifyMode(QSslSocket::VerifyNone);
-    connect(_sok, &QSslSocket::encrypted, this, &MainWindow::onConnected);
-    #endif // CRYPTO
-
     menu = new QMenu("Send text");
 
     action_image= new QAction();
@@ -281,11 +276,7 @@ void MainWindow::slotReadyRead(const QByteArray &arr)
                 else if (jsonobj.contains("reconnect"))//команда сменить ключ и переподключиться
                 {
                     on_actionDisconnect_triggered();
-
-                    #ifdef CRYPTO
-                    generate_key();
-                    #endif // CRYPTO
-
+                    //in progress...
                     on_actionConnect_triggered();
                 }
                 else if (jsonobj.contains("disconnect"))
@@ -304,8 +295,8 @@ void MainWindow::slotReadyRead(const QByteArray &arr)
                     int ava_width = jsonobj["avatarka_width"].toString().toInt();
                     int ava_height = jsonobj["avatarka_height"].toString().toInt();
                     QListWidgetItem *item1 = new QListWidgetItem;
-                    if (address == _socket->peerAddress().toString() && name == _username)//если это ваше сообщение
-                    { 
+                    if (address == _socket->peerAddress().toString() + ":" + QString::number(_socket->peerPort()) && name == _username)//если это ваше сообщение
+                    {
                         name = "YOU";
                     }
                     if (_user_status != "NoDisturb")//проигрывать звук, если не стоит режим не беспокоить
@@ -365,7 +356,7 @@ void MainWindow::slotReadyRead(const QByteArray &arr)
                     QString avatarka = jsonobj["avatarka"].toString();//аватарка
                     int ava_width = jsonobj["avatarka_width"].toString().toInt();
                     int ava_height = jsonobj["avatarka_height"].toString().toInt();
-                    if (address == _socket->peerAddress().toString() && name == _username)//если это ваше сообщение, то выделяется синим
+                    if (address == _socket->peerAddress().toString() + ":" + QString::number(_socket->peerPort()) && name == _username)//если это ваше сообщение, то выделяется синим
                     {
                         name = "YOU";
                     }
@@ -420,7 +411,7 @@ void MainWindow::slotReadyRead(const QByteArray &arr)
                     int ava_height = jsonobj["avatarka_height"].toString().toInt();
                     QString date = jsonobj["date"].toString();//дата и время сообщения
                     QString address = jsonobj["address"].toString();//ip и порт
-                    if (address == _socket->peerAddress().toString() && name == _username)//если это ваше сообщение, то выделяется синим
+                    if (address == _socket->peerAddress().toString() + ":" + QString::number(_socket->peerPort()) && name == _username)//если это ваше сообщение, то выделяется синим
                     {
                         name = "YOU";
                     }
@@ -495,6 +486,7 @@ void MainWindow::slotReadyRead(const QByteArray &arr)
                         for (auto i = _users_vector.begin(); i != _users_vector.end(); i++)
                         {
                             auto temp_i = std::make_tuple((*i)->name, (*i)->ip, (*i)->date, (*i)->status);
+                            qDebug() << std::get<1>(temp_i) + " " + std::get<1>(temp);
                             if (temp_i == temp)
                             {
                                 _ui->listWidget->removeItemWidget((*i)->element);
@@ -768,20 +760,6 @@ void MainWindow::on_actionSave_to_XML_triggered()// сохранить исто�
 
 void MainWindow::SaveToXML()
 {
-    #ifdef CRYPTO
-    OPENSSL_add_all_algorithms_conf();
-    ERR_load_ERR_strings();
-    ENGINE *engine_gost = ENGINE_by_id("gost");
-    const EVP_CIPHER * cipher_gost = EVP_get_cipher_by_name("gost89");
-    unsigned char * iv = (unsigned char * ) "12345678";
-    unsigned char ciph[512];
-    int ciph_len = 0;
-    EVP_CIPHER_CTX * ctx = EVP_CIPHER_CTX_new();
-    QByteArray ba = _password.toLocal8Bit();
-    const char *pass = ba.data();
-    int init = EVP_EncryptInit_ex(ctx, cipher_gost, engine_gost, pass, iv);
-    #endif // CRYPTO
-
     QDomDocument doc;
     QDomElement passw = doc.createElement("password");
     QDomText passwText = doc.createTextNode(_password.toUtf8().toBase64(QByteArray::Base64Encoding));
@@ -847,14 +825,6 @@ void MainWindow::SaveToXML()
             message.appendChild(file_id);
         }
 
-        #ifdef CRYPTO
-        ba = QByteArray::fromHex(text.toLatin1());
-        const unsigned char *result = reinterpret_cast<const unsigned char *>(ba.constData());
-        int enc = EVP_EncryptUpdate(ctx, ciph, &ciph_len, result, text.length());
-        log.setAttribute("content", enc);
-        QDomText messageText = doc.createTextNode(enc);
-        #endif // CRYPTO
-
         QDomElement name = doc.createElement("name");
         QDomText nameText = doc.createTextNode(i.toObject()["username"].toString());
         date.appendChild(dateText);
@@ -888,23 +858,6 @@ void MainWindow::on_actionExit_triggered()// выход из приложени�
     this->close();
     qApp->exit();
 }
-
-#ifdef CRYPTO
-void MainWindow::onConnected()
-{
-    this->_sok->write(this->_name.toStdString().c_str());
-    if (!this->_sok->waitForBytesWritten(3000))
-    {
-        QMessageBox msgBox;
-        msgBox.setText("Unable to send username to the server, please check connection!");
-        msgBox.exec();
-    }
-    else
-    {
-        qDebug() << this->_name;
-    }
-}
-#endif // CRYPTO
 
 void MainWindow::UploadSettings()
 {

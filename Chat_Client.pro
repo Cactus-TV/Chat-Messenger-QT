@@ -19,7 +19,6 @@ SOURCES += \
     mainwindow.cpp
 
 HEADERS += \
-    crypto-generator.h \
     extra.h \
     mainwindow.h
 

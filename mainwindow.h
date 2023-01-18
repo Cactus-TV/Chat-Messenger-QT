@@ -37,14 +37,6 @@
 #include <QPalette>
 #include <QColorDialog>
 
-//#define CRYPTO
-#ifdef CRYPTO
-#include "crypto_generator.h"
-#include <QRegExp>
-#include <QSoundEffect>
-#include <QSslSocket>
-#endif // CRYPTO
-
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
@@ -93,11 +85,6 @@ private:
     void Change_Background_Color();
     void Change_Messages_Color();
     void Change_Show_Time();
-
-    #ifdef CRYPTO
-    void onConnected();
-    void ChangeKey();
-    #endif // CRYPTO
 
     QMap<QListWidgetItem*, std::tuple<QString, int, int>> _images_map;
     QMap<QListWidgetItem*, std::tuple<QString, QString>> _files_map;
