@@ -14,7 +14,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(_ui->listWidget_2, SIGNAL(itemClicked(QListWidgetItem*)), this, SLOT(OpenImageFile(QListWidgetItem*)));
 
     std::string curpath = QDir::currentPath().toStdString();
-    QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client_2/settings.ini");
+    QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client/settings.ini");
     settings = new QSettings(path, QSettings::IniFormat);
     UploadSettings();
     _ui->action->setChecked(true);
@@ -178,7 +178,7 @@ void MainWindow::Change_Show_Time()
 void MainWindow::OpenFile()
 {
     std::string curpath = QDir::currentPath().toStdString();
-    QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client_2");
+    QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client");
     QDir dir_temp(path);//создаём temp директорию
     dir_temp.mkdir("temp");
     QFile file(path + "/temp/" + std::get<1>(_chosen_file));
@@ -276,7 +276,7 @@ void MainWindow::slotReadyRead(const QByteArray &arr)
                 else if (jsonobj.contains("reconnect"))//команда сменить ключ и переподключиться
                 {
                     on_actionDisconnect_triggered();
-                    //in progress
+                    //in progress...
                     on_actionConnect_triggered();
                 }
                 else if (jsonobj.contains("disconnect"))
@@ -295,14 +295,14 @@ void MainWindow::slotReadyRead(const QByteArray &arr)
                     int ava_width = jsonobj["avatarka_width"].toString().toInt();
                     int ava_height = jsonobj["avatarka_height"].toString().toInt();
                     QListWidgetItem *item1 = new QListWidgetItem;
-                    if (address == _socket->peerAddress().toString() && name == _username)//если это ваше сообщение
+                    if (address == _socket->peerAddress().toString() + ":" + QString::number(_socket->peerPort()) && name == _username)//если это ваше сообщение
                     {
                         name = "YOU";
                     }
                     if (_user_status != "NoDisturb")//проигрывать звук, если не стоит режим не беспокоить
                     {
                         std::string curpath = QDir::currentPath().toStdString();
-                        QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client_2/sms.wav");
+                        QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client/sms.wav");
                         QMediaPlayer effect;
                         effect.setSource(QUrl::fromLocalFile(path));
                         effect.play();
@@ -356,14 +356,14 @@ void MainWindow::slotReadyRead(const QByteArray &arr)
                     QString avatarka = jsonobj["avatarka"].toString();//аватарка
                     int ava_width = jsonobj["avatarka_width"].toString().toInt();
                     int ava_height = jsonobj["avatarka_height"].toString().toInt();
-                    if (address == _socket->peerAddress().toString() + ":" + _socket->peerPort() && name == _username)//если это ваше сообщение, то выделяется синим
+                    if (address == _socket->peerAddress().toString() + ":" + QString::number(_socket->peerPort()) && name == _username)//если это ваше сообщение, то выделяется синим
                     {
                         name = "YOU";
                     }
                     if (_user_status != "NoDisturb")//проигрывать звук, если не стоит режим не беспокоить
                     {
                         std::string curpath = QDir::currentPath().toStdString();
-                        QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client_2/sms.wav");
+                        QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client/sms.wav");
                         QMediaPlayer effect;
                         effect.setSource(QUrl::fromLocalFile(path));
                         effect.play();
@@ -411,14 +411,14 @@ void MainWindow::slotReadyRead(const QByteArray &arr)
                     int ava_height = jsonobj["avatarka_height"].toString().toInt();
                     QString date = jsonobj["date"].toString();//дата и время сообщения
                     QString address = jsonobj["address"].toString();//ip и порт
-                    if (address == _socket->peerAddress().toString() && name == _username)//если это ваше сообщение, то выделяется синим
+                    if (address == _socket->peerAddress().toString() + ":" + QString::number(_socket->peerPort()) && name == _username)//если это ваше сообщение, то выделяется синим
                     {
                         name = "YOU";
                     }
                     if (_user_status != "NoDisturb")//проигрывать звук, если не стоит режим не беспокоить
                     {
                         std::string curpath = QDir::currentPath().toStdString();
-                        QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client_2/sms.wav");
+                        QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client/sms.wav");
                         QMediaPlayer effect;
                         effect.setSource(QUrl::fromLocalFile(path));
                         effect.play();
@@ -451,7 +451,7 @@ void MainWindow::slotReadyRead(const QByteArray &arr)
                 }
                 else if(jsonobj.contains("is_new"))//информация о новом/ушедшем пользователе
                 {
-                    //qDebug() << "user";
+                    qDebug() << "user";
                     bool is_new = jsonobj["is_new"].toBool();//новый ли пользователь
                     QString name = jsonobj["username"].toString();//имя
                     QString ip = jsonobj["ip"].toString();//ip
@@ -481,11 +481,12 @@ void MainWindow::slotReadyRead(const QByteArray &arr)
                     }
                     else//если пользователь вышел из чата
                     {
-                        //qDebug() << "leave";
+                        qDebug() << "leave";
                         auto temp = std::make_tuple(name, ip, time, status);
                         for (auto i = _users_vector.begin(); i != _users_vector.end(); i++)
                         {
                             auto temp_i = std::make_tuple((*i)->name, (*i)->ip, (*i)->date, (*i)->status);
+                            qDebug() << std::get<1>(temp_i) + " " + std::get<1>(temp);
                             if (temp_i == temp)
                             {
                                 _ui->listWidget->removeItemWidget((*i)->element);
@@ -851,7 +852,7 @@ void MainWindow::on_actionExit_triggered()// выход из приложени�
     on_actionDisconnect_triggered();
     if (file.isOpen()) file.close();
     std::string curpath = QDir::currentPath().toStdString();
-    QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client_2/");
+    QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client/");
     QDir dir_temp(path + "temp");
     dir_temp.removeRecursively();
     this->close();
@@ -1184,7 +1185,7 @@ void MainWindow::on_actionAbout_program_triggered()// о программе
 
     QBoxLayout* boxLayout1 = new QBoxLayout(QBoxLayout::LeftToRight);
     std::string curpath = QDir::currentPath().toStdString();
-    QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client_2/ava.png");
+    QString path = QString::fromStdString(curpath.substr(0, curpath.find_last_of("/") + 1) + "Chat_Client/ava.png");
     QPixmap image(path);
     image = image.scaledToWidth(this->size().width()/2, Qt::SmoothTransformation);
     image = image.scaledToHeight(this->size().height()/2, Qt::SmoothTransformation);
